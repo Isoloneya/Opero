@@ -6,6 +6,8 @@ import type {
   UserListItem,
   UsersPage,
   WarehousesPage,
+  CreateWarehousePayload,
+  Warehouse,
 } from "@/types/auth";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
@@ -117,4 +119,24 @@ export async function getWarehouses(token: string): Promise<WarehousesPage> {
   }
 
   return response.json() as Promise<WarehousesPage>;
+}
+export async function createWarehouse(
+  token: string,
+  payload: CreateWarehousePayload,
+): Promise<Warehouse> {
+  const response = await fetch(`${apiUrl}/warehouses`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося створити склад");
+  }
+
+  return response.json() as Promise<Warehouse>;
 }

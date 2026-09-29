@@ -1,39 +1,91 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { MapPin, Warehouse as WarehouseIcon } from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
+import { MapPin, Plus, Warehouse as WarehouseIcon, X } from "lucide-react";
 
-import { getWarehouses } from "@/lib/api";
-import type { Warehouse } from "@/types/auth";
+import { createWarehouse, getWarehouses } from "@/lib/api";
+import type {
+  CreateWarehousePayload,
+  Warehouse,
+} from "@/types/auth";
+
+const initialForm: CreateWarehousePayload = {
+  name: "",
+  location: "",
+};
 
 export default function WarehousesPage() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [total, setTotal] = useState(0);
+  const [form, setForm] = useState<CreateWarehousePayload>(initialForm);
   const [errorMessage, setErrorMessage] = useState("");
+  const [formErrorMessage, setFormErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
-  useEffect(() => {
-    async function loadWarehouses() {
-      const token = localStorage.getItem("opero_access_token");
+  async function loadWarehouses() {
+    const token = localStorage.getItem("opero_access_token");
 
-      if (!token) {
-        return;
-      }
-
-      try {
-        const response = await getWarehouses(token);
-        setWarehouses(response.items);
-        setTotal(response.total);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Не вдалося завантажити склади";
-        setErrorMessage(message);
-      } finally {
-        setIsLoading(false);
-      }
+    if (!token) {
+      return;
     }
 
+    try {
+      const response = await getWarehouses(token);
+      setWarehouses(response.items);
+      setTotal(response.total);
+      setErrorMessage("");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Не вдалося завантажити склади";
+      setErrorMessage(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
     void loadWarehouses();
   }, []);
+
+  function openForm() {
+    setForm(initialForm);
+    setFormErrorMessage("");
+    setIsFormOpen(true);
+  }
+
+  function closeForm() {
+    if (!isSubmitting) {
+      setIsFormOpen(false);
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const token = localStorage.getItem("opero_access_token");
+
+    if (!token) {
+      setFormErrorMessage("Сесія завершилася. Увійди до системи повторно.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFormErrorMessage("");
+
+    try {
+      await createWarehouse(token, form);
+      setIsFormOpen(false);
+      setForm(initialForm);
+      setIsLoading(true);
+      await loadWarehouses();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Не вдалося створити склад";
+      setFormErrorMessage(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -46,9 +98,10 @@ export default function WarehousesPage() {
 
         <button
           type="button"
+          onClick={openForm}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-opero-blue px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
         >
-          <WarehouseIcon size={18} />
+          <Plus size={18} />
           Додати склад
         </button>
       </section>
@@ -107,6 +160,76 @@ export default function WarehousesPage() {
             Створи перший склад для обліку товарних залишків.
           </p>
         </section>
+      ) : null}
+
+      {isFormOpen ? (
+        <div className="fixed inset-0 z-20 grid place-items-end bg-slate-950/40 p-0 sm:place-items-center sm:p-6">
+          <section className="w-full rounded-t-2xl bg-white p-6 sm:max-w-lg sm:rounded-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-opero-muted">Операції</p>
+                <h2 className="text-xl font-bold text-opero-text">Новий склад</h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeForm}
+                className="grid size-10 place-items-center rounded-xl border border-opero-border text-opero-muted"
+                aria-label="Закрити форму"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+              <label className="grid gap-2 text-sm font-semibold text-opero-text">
+                Назва складу
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(event) =>
+                    setForm((currentForm) => ({
+                      ...currentForm,
+                      name: event.target.value,
+                    }))
+                  }
+                  className="rounded-xl border border-opero-border px-3 py-2.5 font-normal outline-none transition focus:border-opero-blue"
+                  minLength={2}
+                  maxLength={120}
+                  required
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm font-semibold text-opero-text">
+                Локація
+                <input
+                  type="text"
+                  value={form.location}
+                  onChange={(event) =>
+                    setForm((currentForm) => ({
+                      ...currentForm,
+                      location: event.target.value,
+                    }))
+                  }
+                  className="rounded-xl border border-opero-border px-3 py-2.5 font-normal outline-none transition focus:border-opero-blue"
+                  maxLength={255}
+                />
+              </label>
+
+              {formErrorMessage ? (
+                <p className="text-sm font-medium text-red-600">{formErrorMessage}</p>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex w-full items-center justify-center rounded-xl bg-opero-blue px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-wait disabled:opacity-60"
+              >
+                {isSubmitting ? "Створюємо склад" : "Створити склад"}
+              </button>
+            </form>
+          </section>
+        </div>
       ) : null}
     </div>
   );

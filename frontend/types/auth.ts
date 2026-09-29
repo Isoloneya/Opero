@@ -51,3 +51,9 @@ export type WarehousesPage = {
   page: number;
   page_size: number;
 };
+
+export type CreateWarehousePayload = {
+  name: string;
+  location: string;
+};
+
