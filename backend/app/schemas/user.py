@@ -24,3 +24,9 @@ class UserResponse(BaseModel):
     email: EmailStr
     role: UserRole
     is_active: bool
+
+class UsersPageResponse(BaseModel):
+    items: list[UserResponse]
+    total: int
+    page: int
+    page_size: int

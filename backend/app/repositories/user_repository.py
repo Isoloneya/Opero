@@ -1,5 +1,6 @@
-from sqlalchemy import select
+
 from sqlalchemy.orm import Session
+from sqlalchemy import func, select
 
 from app.models.user import User
 
@@ -17,3 +18,20 @@ class UserRepository:
         database_session.flush()
         database_session.refresh(user)
         return user
+    def get_page(
+        self,
+        database_session: Session,
+        page: int,
+        page_size: int,
+    ) -> tuple[list[User], int]:
+        total = database_session.scalar(select(func.count()).select_from(User)) or 0
+
+        statement = (
+            select(User)
+            .order_by(User.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+
+        users = list(database_session.scalars(statement))
+        return users, total
