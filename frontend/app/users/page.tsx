@@ -1,9 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { UserPlus, X } from "lucide-react";
+import { Power, PowerOff, UserPlus, X } from "lucide-react";
 
-import { createUser, getUsers } from "@/lib/api";
+import { createUser, getUsers, updateUserStatus } from "@/lib/api";
 import type { CreateUserPayload, UserListItem } from "@/types/auth";
 
 const roleLabels = {
@@ -29,10 +29,11 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
 
   async function loadUsers() {
     const token = localStorage.getItem("opero_access_token");
-
+    
     if (!token) {
       return;
     }
@@ -92,6 +93,27 @@ export default function UsersPage() {
       setIsSubmitting(false);
     }
   }
+ 
+   async function handleStatusChange(user: UserListItem) {
+    const token = localStorage.getItem("opero_access_token");
+
+    if (!token) {
+        setErrorMessage("Сесія завершилася. Увійди до системи повторно.");
+        return;
+    }
+
+    setUpdatingUserId(user.id);
+
+    try {
+        await updateUserStatus(token, user.id, !user.is_active);
+        await loadUsers();
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Не вдалося оновити користувача";
+        setErrorMessage(message);
+    } finally {
+        setUpdatingUserId(null);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -132,33 +154,52 @@ export default function UsersPage() {
                   <th className="px-5 py-3 font-semibold">Email</th>
                   <th className="px-5 py-3 font-semibold">Роль</th>
                   <th className="px-5 py-3 font-semibold">Статус</th>
+                  <th className="px-5 py-3 text-right font-semibold">Дії</th>
                 </tr>
               </thead>
+                <tbody>
+            {users.map((user) => (
+                <tr key={user.id} className="border-b border-opero-border last:border-0">
+                <td className="px-5 py-4 font-semibold text-opero-text">
+                    {user.full_name}
+                </td>
 
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b border-opero-border last:border-0">
-                    <td className="px-5 py-4 font-semibold text-opero-text">
-                      {user.full_name}
-                    </td>
-                    <td className="px-5 py-4 text-opero-muted">{user.email}</td>
-                    <td className="px-5 py-4 text-opero-muted">
-                      {roleLabels[user.role]}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span
-                        className={
-                          user.is_active
-                            ? "rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800"
-                            : "rounded-full bg-slate-200 px-2.5 py-1 text-xs font-bold text-slate-600"
-                        }
-                      >
-                        {user.is_active ? "Активний" : "Деактивований"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+                <td className="px-5 py-4 text-opero-muted">{user.email}</td>
+
+                <td className="px-5 py-4 text-opero-muted">
+                    {roleLabels[user.role]}
+                </td>
+
+                <td className="px-5 py-4">
+                    <span
+                className={
+                    user.is_active
+                    ? "rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800"
+                    : "rounded-full bg-slate-200 px-2.5 py-1 text-xs font-bold text-slate-600"
+                }
+                >
+                {user.is_active ? "Активний" : "Деактивований"}
+                </span>
+            </td>
+
+            <td className="px-5 py-4 text-right">
+                <button
+                type="button"
+                onClick={() => handleStatusChange(user)}
+                disabled={updatingUserId === user.id}
+                className={
+                    user.is_active
+                    ? "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-60"
+                    : "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-wait disabled:opacity-60"
+                }
+                >
+                {user.is_active ? <PowerOff size={16} /> : <Power size={16} />}
+                {user.is_active ? "Деактивувати" : "Активувати"}
+                </button>
+            </td>
+            </tr>
+        ))}
+        </tbody>
             </table>
           </div>
         ) : null}

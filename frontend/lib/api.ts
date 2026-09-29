@@ -79,3 +79,26 @@ export async function createUser(
 
   return response.json() as Promise<UserListItem>;
 }
+export async function updateUserStatus(
+  token: string,
+  userId: number,
+  isActive: boolean,
+): Promise<UserListItem> {
+  const response = await fetch(`${apiUrl}/users/${userId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      is_active: isActive,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося оновити користувача");
+  }
+
+  return response.json() as Promise<UserListItem>;
+}
