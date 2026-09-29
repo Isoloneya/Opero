@@ -5,6 +5,7 @@ import type {
   CurrentUser,
   UserListItem,
   UsersPage,
+  WarehousesPage,
 } from "@/types/auth";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
@@ -101,4 +102,19 @@ export async function updateUserStatus(
   }
 
   return response.json() as Promise<UserListItem>;
+}
+
+export async function getWarehouses(token: string): Promise<WarehousesPage> {
+  const response = await fetch(`${apiUrl}/warehouses?page=1&page_size=20`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося отримати список складів");
+  }
+
+  return response.json() as Promise<WarehousesPage>;
 }

@@ -36,3 +36,18 @@ export type CreateUserPayload = {
   password: string;
   role: "admin" | "manager" | "warehouse_keeper" | "employee";
 };
+
+export type Warehouse = {
+  id: number;
+  name: string;
+  location: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type WarehousesPage = {
+  items: Warehouse[];
+  total: number;
+  page: number;
+  page_size: number;
+};
