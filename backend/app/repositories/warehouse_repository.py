@@ -5,6 +5,15 @@ from app.models.warehouse import Warehouse
 
 
 class WarehouseRepository:
+
+    def get_by_id(
+        self,
+        database_session: Session,
+        warehouse_id: int,
+    ) -> Warehouse | None:
+        statement = select(Warehouse).where(Warehouse.id == warehouse_id)
+        return database_session.scalar(statement)
+
     def get_by_name(
         self,
         database_session: Session,

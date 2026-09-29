@@ -5,6 +5,14 @@ from app.models.product import Product
 
 
 class ProductRepository:
+
+    def get_by_id(
+        self,
+        database_session: Session,
+        product_id: int,
+    ) -> Product | None:
+        return database_session.get(Product, product_id)
+    
     def get_by_sku(
         self,
         database_session: Session,
