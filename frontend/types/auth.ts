@@ -29,3 +29,10 @@ export type UsersPage = {
   page: number;
   page_size: number;
 };
+
+export type CreateUserPayload = {
+  full_name: string;
+  email: string;
+  password: string;
+  role: "admin" | "manager" | "warehouse_keeper" | "employee";
+};
