@@ -1,9 +1,14 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { Power, PowerOff, UserPlus, X } from "lucide-react";
+import { Power, PowerOff, Trash2, UserPlus, X } from "lucide-react";
 
-import { createUser, getUsers, updateUserStatus } from "@/lib/api";
+import {
+  createUser,
+  deleteUser,
+  getUsers,
+  updateUserStatus,
+} from "@/lib/api";
 import type { CreateUserPayload, UserListItem } from "@/types/auth";
 
 const roleLabels = {
@@ -30,10 +35,11 @@ export default function UsersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
 
   async function loadUsers() {
     const token = localStorage.getItem("opero_access_token");
-    
+
     if (!token) {
       return;
     }
@@ -44,8 +50,11 @@ export default function UsersPage() {
       setTotal(response.total);
       setErrorMessage("");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Не вдалося завантажити користувачів";
-      setErrorMessage(message);
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Не вдалося завантажити користувачів",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -87,31 +96,69 @@ export default function UsersPage() {
       setIsLoading(true);
       await loadUsers();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Не вдалося створити користувача";
-      setFormErrorMessage(message);
+      setFormErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Не вдалося створити користувача",
+      );
     } finally {
       setIsSubmitting(false);
     }
   }
- 
-   async function handleStatusChange(user: UserListItem) {
+
+  async function handleStatusChange(user: UserListItem) {
     const token = localStorage.getItem("opero_access_token");
 
     if (!token) {
-        setErrorMessage("Сесія завершилася. Увійди до системи повторно.");
-        return;
+      setErrorMessage("Сесія завершилася. Увійди до системи повторно.");
+      return;
     }
 
     setUpdatingUserId(user.id);
 
     try {
-        await updateUserStatus(token, user.id, !user.is_active);
-        await loadUsers();
+      await updateUserStatus(token, user.id, !user.is_active);
+      await loadUsers();
     } catch (error) {
-        const message = error instanceof Error ? error.message : "Не вдалося оновити користувача";
-        setErrorMessage(message);
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Не вдалося оновити користувача",
+      );
     } finally {
-        setUpdatingUserId(null);
+      setUpdatingUserId(null);
+    }
+  }
+
+  async function handleDeleteUser(user: UserListItem) {
+    const shouldDelete = window.confirm(
+      `Видалити користувача ${user.full_name} без можливості відновлення?`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    const token = localStorage.getItem("opero_access_token");
+
+    if (!token) {
+      setErrorMessage("Сесія завершилася. Увійди до системи повторно.");
+      return;
+    }
+
+    setDeletingUserId(user.id);
+
+    try {
+      await deleteUser(token, user.id);
+      await loadUsers();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Не вдалося видалити користувача",
+      );
+    } finally {
+      setDeletingUserId(null);
     }
   }
 
@@ -123,7 +170,9 @@ export default function UsersPage() {
           <h2 className="text-2xl font-bold tracking-tight text-opero-text">
             Користувачі
           </h2>
-          <p className="mt-1 text-sm text-opero-muted">Усього користувачів: {total}</p>
+          <p className="mt-1 text-sm text-opero-muted">
+            Усього користувачів: {total}
+          </p>
         </div>
 
         <button
@@ -157,49 +206,74 @@ export default function UsersPage() {
                   <th className="px-5 py-3 text-right font-semibold">Дії</th>
                 </tr>
               </thead>
-                <tbody>
-            {users.map((user) => (
-                <tr key={user.id} className="border-b border-opero-border last:border-0">
-                <td className="px-5 py-4 font-semibold text-opero-text">
-                    {user.full_name}
-                </td>
 
-                <td className="px-5 py-4 text-opero-muted">{user.email}</td>
+              <tbody>
+                {users.map((user) => (
+                  <tr
+                    key={user.id}
+                    className="border-b border-opero-border last:border-0"
+                  >
+                    <td className="px-5 py-4 font-semibold text-opero-text">
+                      {user.full_name}
+                    </td>
 
-                <td className="px-5 py-4 text-opero-muted">
-                    {roleLabels[user.role]}
-                </td>
+                    <td className="px-5 py-4 text-opero-muted">{user.email}</td>
 
-                <td className="px-5 py-4">
-                    <span
-                className={
-                    user.is_active
-                    ? "rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800"
-                    : "rounded-full bg-slate-200 px-2.5 py-1 text-xs font-bold text-slate-600"
-                }
-                >
-                {user.is_active ? "Активний" : "Деактивований"}
-                </span>
-            </td>
+                    <td className="px-5 py-4 text-opero-muted">
+                      {roleLabels[user.role]}
+                    </td>
 
-            <td className="px-5 py-4 text-right">
-                <button
-                type="button"
-                onClick={() => handleStatusChange(user)}
-                disabled={updatingUserId === user.id}
-                className={
-                    user.is_active
-                    ? "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-60"
-                    : "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-wait disabled:opacity-60"
-                }
-                >
-                {user.is_active ? <PowerOff size={16} /> : <Power size={16} />}
-                {user.is_active ? "Деактивувати" : "Активувати"}
-                </button>
-            </td>
-            </tr>
-        ))}
-        </tbody>
+                    <td className="px-5 py-4">
+                      <span
+                        className={
+                          user.is_active
+                            ? "rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800"
+                            : "rounded-full bg-slate-200 px-2.5 py-1 text-xs font-bold text-slate-600"
+                        }
+                      >
+                        {user.is_active ? "Активний" : "Деактивований"}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleStatusChange(user)}
+                          disabled={
+                            updatingUserId === user.id ||
+                            deletingUserId === user.id
+                          }
+                          className={
+                            user.is_active
+                              ? "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-60"
+                              : "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-wait disabled:opacity-60"
+                          }
+                        >
+                          {user.is_active ? (
+                            <PowerOff size={16} />
+                          ) : (
+                            <Power size={16} />
+                          )}
+                          {user.is_active ? "Деактивувати" : "Активувати"}
+                        </button>
+
+                        {!user.is_active ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(user)}
+                            disabled={deletingUserId === user.id}
+                            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-60"
+                          >
+                            <Trash2 size={16} />
+                            Видалити
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
         ) : null}
@@ -211,7 +285,9 @@ export default function UsersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-opero-muted">Адміністрування</p>
-                <h2 className="text-xl font-bold text-opero-text">Новий користувач</h2>
+                <h2 className="text-xl font-bold text-opero-text">
+                  Новий користувач
+                </h2>
               </div>
 
               <button
@@ -296,7 +372,9 @@ export default function UsersPage() {
               </label>
 
               {formErrorMessage ? (
-                <p className="text-sm font-medium text-red-600">{formErrorMessage}</p>
+                <p className="text-sm font-medium text-red-600">
+                  {formErrorMessage}
+                </p>
               ) : null}
 
               <button

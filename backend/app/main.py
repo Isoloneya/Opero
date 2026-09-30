@@ -4,6 +4,7 @@ from app.api.v1.inventory import (
     inventory_router,
     router as stock_movements_router,
 )
+from app.api.v1.audit_logs import router as audit_logs_router
 from app.api.v1.requests import router as requests_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.health import router as health_router
@@ -39,3 +40,4 @@ app.include_router(stock_movements_router, prefix="/api/v1")
 app.include_router(inventory_router, prefix="/api/v1")
 app.include_router(requests_router, prefix="/api/v1")
 app.include_router(tasks_router, prefix="/api/v1")
+app.include_router(audit_logs_router, prefix="/api/v1")

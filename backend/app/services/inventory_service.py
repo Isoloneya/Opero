@@ -9,6 +9,7 @@ from app.repositories.inventory_repository import InventoryRepository
 from app.repositories.product_repository import ProductRepository
 from app.repositories.warehouse_repository import WarehouseRepository
 from app.schemas.inventory import StockMovementCreate
+from app.services.audit_log_service import AuditLogService
 
 
 class InventoryService:
@@ -17,10 +18,12 @@ class InventoryService:
         inventory_repository: InventoryRepository | None = None,
         product_repository: ProductRepository | None = None,
         warehouse_repository: WarehouseRepository | None = None,
+        audit_log_service: AuditLogService | None = None,
     ) -> None:
         self.inventory_repository = inventory_repository or InventoryRepository()
         self.product_repository = product_repository or ProductRepository()
         self.warehouse_repository = warehouse_repository or WarehouseRepository()
+        self.audit_log_service = audit_log_service or AuditLogService()
 
     def create_movement(
         self,
@@ -83,5 +86,20 @@ class InventoryService:
             movement,
         )
 
+        self.audit_log_service.record(
+            database_session,
+            user_id=user_id,
+            action="stock_movement_created",
+            entity_type="stock_movement",
+            entity_id=created_movement.id,
+            details={
+                "type": payload.type.value,
+                "warehouse_id": payload.warehouse_id,
+                "product_id": payload.product_id,
+                "quantity": float(payload.quantity),
+            },
+        )
+
         database_session.commit()
+
         return created_movement

@@ -8,7 +8,9 @@ import type {
   WarehousesPage,
   CreateWarehousePayload,
   Warehouse,
+  RegisterPayload
 } from "@/types/auth";
+
 import type {
   CreateStockMovementPayload,
   InventoryBalance,
@@ -30,6 +32,8 @@ import type {
   TasksPage,
   UpdateTaskStatusPayload,
 } from "@/types/task";
+
+import type { AuditLogsPage } from "@/types/audit-log";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -354,4 +358,50 @@ export async function updateTaskStatus(
   }
 
   return response.json() as Promise<TaskData>;
+}
+
+export async function getAuditLogs(token: string): Promise<AuditLogsPage> {
+  const response = await fetch(`${apiUrl}/audit-logs?page=1&page_size=100`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося отримати журнал дій");
+  }
+
+  return response.json() as Promise<AuditLogsPage>;
+}
+
+export async function register(payload: RegisterPayload): Promise<AuthSession> {
+  const response = await fetch(`${apiUrl}/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося зареєструватися");
+  }
+
+  return response.json() as Promise<AuthSession>;
+}
+
+export async function deleteUser(token: string, userId: number): Promise<void> {
+  const response = await fetch(`${apiUrl}/users/${userId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося видалити користувача");
+  }
 }

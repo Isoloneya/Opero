@@ -18,6 +18,7 @@ from app.schemas.request import (
     RequestResponse,
     RequestsPageResponse,
 )
+from app.services.audit_log_service import AuditLogService
 
 
 class RequestService:
@@ -27,11 +28,13 @@ class RequestService:
         product_repository: ProductRepository | None = None,
         warehouse_repository: WarehouseRepository | None = None,
         inventory_repository: InventoryRepository | None = None,
+        audit_log_service: AuditLogService | None = None,
     ) -> None:
         self.request_repository = request_repository or RequestRepository()
         self.product_repository = product_repository or ProductRepository()
         self.warehouse_repository = warehouse_repository or WarehouseRepository()
         self.inventory_repository = inventory_repository or InventoryRepository()
+        self.audit_log_service = audit_log_service or AuditLogService()
 
     def create_request(
         self,
@@ -83,6 +86,20 @@ class RequestService:
             )
             for item in payload.items
         ]
+
+        self.audit_log_service.record(
+            database_session,
+            user_id=user_id,
+            action="request_created",
+            entity_type="request",
+            entity_id=created_request.id,
+            details={
+                "request_number": created_request.request_number,
+                "type": payload.type.value,
+                "warehouse_id": payload.warehouse_id,
+                "items_count": len(request_items),
+            },
+        )
 
         database_session.commit()
 
@@ -145,6 +162,18 @@ class RequestService:
         request.decision_comment = payload.decision_comment
         request.decided_at = datetime.now()
 
+        self.audit_log_service.record(
+            database_session,
+            user_id=user_id,
+            action=f"request_{payload.status.value}",
+            entity_type="request",
+            entity_id=request.id,
+            details={
+                "request_number": request.request_number,
+                "status": payload.status.value,
+            },
+        )
+
         database_session.commit()
 
         request_items = self.request_repository.get_items(
@@ -201,7 +230,7 @@ class RequestService:
             balance = balances[item.product_id]
             balance.quantity -= item.quantity
 
-            self.inventory_repository.create_movement(
+            created_movement = self.inventory_repository.create_movement(
                 database_session,
                 StockMovement(
                     warehouse_id=request.warehouse_id,
@@ -212,7 +241,33 @@ class RequestService:
                 ),
             )
 
+            self.audit_log_service.record(
+                database_session,
+                user_id=user_id,
+                action="stock_movement_created",
+                entity_type="stock_movement",
+                entity_id=created_movement.id,
+                details={
+                    "type": StockMovementType.ISSUE.value,
+                    "warehouse_id": request.warehouse_id,
+                    "product_id": item.product_id,
+                    "quantity": float(item.quantity),
+                },
+            )
+
         request.status = RequestStatus.COMPLETED
+
+        self.audit_log_service.record(
+            database_session,
+            user_id=user_id,
+            action="request_completed",
+            entity_type="request",
+            entity_id=request.id,
+            details={
+                "request_number": request.request_number,
+                "items_count": len(request_items),
+            },
+        )
 
         database_session.commit()
 

@@ -35,3 +35,11 @@ class UserRepository:
 
         users = list(database_session.scalars(statement))
         return users, total
+    
+    def delete(
+        self,
+        database_session: Session,
+        user: User,
+    ) -> None:
+        database_session.delete(user)
+        database_session.flush()

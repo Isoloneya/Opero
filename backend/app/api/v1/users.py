@@ -1,5 +1,5 @@
 from typing import Annotated
-
+from fastapi import Response
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import DatabaseSession, require_roles
@@ -89,3 +89,35 @@ def update_user(
     database_session.refresh(user)
 
     return user
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: int,
+    database_session: DatabaseSession,
+    current_admin: CurrentAdmin,
+) -> Response:
+    user_repository = UserRepository()
+    user = user_repository.get_by_id(database_session, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Користувача не знайдено",
+        )
+
+    if user.id == current_admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Неможливо видалити власний обліковий запис",
+        )
+
+    if user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Спершу деактивуй користувача",
+        )
+
+    user_repository.delete(database_session, user)
+    database_session.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

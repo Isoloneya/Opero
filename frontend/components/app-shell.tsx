@@ -1,14 +1,16 @@
 "use client";
 
+import { MobileAccountMenu } from "@/components/mobile-account-menu";
+import { NotificationPanel } from "@/components/notification-panel";
 import type { CurrentUser } from "@/types/auth";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
-  Bell,
   ClipboardList,
   History,
   LayoutDashboard,
   ListTodo,
+  LogOut,
   PackageSearch,
   Plus,
   Users,
@@ -104,6 +106,8 @@ type AppShellProps = {
 
 export function AppShell({ children, user }: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
   const currentPage =
     pageMetadata[pathname as keyof typeof pageMetadata] ?? pageMetadata["/dashboard"];
 
@@ -113,6 +117,11 @@ export function AppShell({ children, user }: AppShellProps) {
     return isActive
       ? "flex items-center gap-3 rounded-xl bg-opero-navy-soft px-3 py-2.5 text-sm font-semibold text-white"
       : "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white";
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("opero_access_token");
+    router.replace("/login");
   }
 
   const initials = user.full_name
@@ -186,50 +195,59 @@ export function AppShell({ children, user }: AppShellProps) {
           })}
         </nav>
 
-        <div className="mt-auto flex items-center gap-3 border-t border-white/15 px-3 pt-5 text-sm text-white">
-          <span className="grid size-9 place-items-center rounded-full bg-slate-300 font-bold text-opero-navy">
-            {initials}
-          </span>
+        <div className="mt-auto border-t border-white/15 px-3 pt-5">
+          <div className="flex items-center gap-3 text-sm text-white">
+            <span className="grid size-9 place-items-center rounded-full bg-slate-300 font-bold text-opero-navy">
+              {initials}
+            </span>
 
-          <div>
-            <p className="font-semibold">{user.full_name}</p>
-            <p className="text-xs text-slate-400">{roleLabel}</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold">{user.full_name}</p>
+              <p className="text-xs text-slate-400">{roleLabel}</p>
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"
+          >
+            <LogOut size={17} />
+            Вийти
+          </button>
         </div>
       </aside>
 
       <div className="pb-20 lg:ml-60 lg:pb-0">
         <header className="flex items-center justify-between border-b border-opero-border bg-white px-4 py-4 sm:px-6 lg:px-8">
           <div>
-            <p className="text-xs font-medium text-opero-muted">{currentPage.section}</p>
+            <p className="text-xs font-medium text-opero-muted">
+              {currentPage.section}
+            </p>
             <h1 className="text-xl font-bold tracking-tight text-opero-text sm:text-2xl">
               {currentPage.title}
             </h1>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="grid size-10 place-items-center rounded-xl border border-opero-border text-opero-muted transition hover:bg-slate-50"
-              aria-label="Сповіщення"
-            >
-              <Bell size={19} />
-            </button>
+            <NotificationPanel />
 
-            <button
-              type="button"
+            <Link
+              href="/requests?create=1"
               className="inline-flex items-center gap-2 rounded-xl bg-opero-blue px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
             >
               <Plus size={18} />
               <span className="hidden sm:inline">Нова заявка</span>
-            </button>
+            </Link>
           </div>
         </header>
 
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          {children}
+        </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-opero-border bg-white lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-5 border-t border-opero-border bg-white lg:hidden">
         {primaryNavigation.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -249,6 +267,7 @@ export function AppShell({ children, user }: AppShellProps) {
             </Link>
           );
         })}
+        <MobileAccountMenu user={user} />
       </nav>
     </div>
   );

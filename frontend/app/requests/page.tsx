@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Check,
   ClipboardList,
@@ -58,6 +59,8 @@ function formatDate(value: string) {
 }
 
 export default function RequestsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [requests, setRequests] = useState<RequestData[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [products, setProducts] = useState<ProductListItem[]>([]);
@@ -198,6 +201,18 @@ export default function RequestsPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+      if (
+        searchParams.get("create") === "1" &&
+        !isLoading &&
+        warehouses.length > 0 &&
+        products.length > 0
+      ) {
+        openCreateForm();
+        router.replace("/requests");
+      }
+  }, [isLoading, products, router, searchParams, warehouses]);
 
   async function handleCreateRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -11,14 +11,17 @@ from app.schemas.task import (
     TaskStatusUpdate,
     TasksPageResponse,
 )
+from app.services.audit_log_service import AuditLogService
 
 
 class TaskService:
     def __init__(
         self,
         task_repository: TaskRepository | None = None,
+        audit_log_service: AuditLogService | None = None,
     ) -> None:
         self.task_repository = task_repository or TaskRepository()
+        self.audit_log_service = audit_log_service or AuditLogService()
 
     def create_task(
         self,
@@ -43,6 +46,19 @@ class TaskService:
         )
 
         created_task = self.task_repository.create(database_session, task)
+
+        self.audit_log_service.record(
+            database_session,
+            user_id=current_user.id,
+            action="task_created",
+            entity_type="task",
+            entity_id=created_task.id,
+            details={
+                "title": created_task.title,
+                "assigned_to": created_task.assigned_to,
+                "priority": created_task.priority.value,
+            },
+        )
 
         database_session.commit()
 
@@ -95,6 +111,18 @@ class TaskService:
         task.status = payload.status
         task.completed_at = (
             datetime.now() if payload.status == TaskStatus.DONE else None
+        )
+
+        self.audit_log_service.record(
+            database_session,
+            user_id=current_user.id,
+            action="task_status_updated",
+            entity_type="task",
+            entity_id=task.id,
+            details={
+                "title": task.title,
+                "status": payload.status.value,
+            },
         )
 
         database_session.commit()

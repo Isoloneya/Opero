@@ -4,18 +4,47 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import DatabaseSession, get_current_user
 from app.models.user import User
-from app.schemas.auth import CurrentUserResponse, LoginRequest, TokenResponse
+from app.schemas.auth import (
+    CurrentUserResponse,
+    LoginRequest,
+    RegisterRequest,
+    TokenResponse,
+)
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def register(
+    payload: RegisterRequest,
+    database_session: DatabaseSession,
+) -> TokenResponse:
+    try:
+        token = AuthService().register(database_session, payload)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
+
+    return TokenResponse(access_token=token)
+
+
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, database_session: DatabaseSession) -> TokenResponse:
     try:
-        token = AuthService().login(database_session, str(payload.email), payload.password)
+        token = AuthService().login(
+            database_session,
+            str(payload.email),
+            payload.password,
+        )
     except PermissionError as error:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error)) from error
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(error),
+        ) from error
+
     return TokenResponse(access_token=token)
 
 

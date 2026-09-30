@@ -3,6 +3,13 @@ export type AuthSession = {
   token_type: string;
 };
 
+export type RegisterPayload = {
+  full_name: string;
+  email: string;
+  password: string;
+  role: "admin" | "manager" | "warehouse_keeper" | "employee";
+};
+
 export type CurrentUser = {
   id: number;
   full_name: string;
