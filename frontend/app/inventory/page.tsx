@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -8,6 +9,7 @@ import {
   Boxes,
   ChevronDown,
   PackageSearch,
+  Plus,
   X,
 } from "lucide-react";
 
@@ -193,6 +195,14 @@ export default function InventoryPage() {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <Link
+            href="/warehouses?create=1"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-opero-border bg-white px-4 py-2.5 text-sm font-semibold text-opero-text transition hover:bg-slate-50"
+          >
+            <Plus size={18} />
+            Додати склад
+          </Link>
+
           <label className="relative block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-opero-muted">
               Склад

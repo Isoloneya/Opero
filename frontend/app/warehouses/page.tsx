@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { MapPin, Plus, Warehouse as WarehouseIcon, X } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 import { createWarehouse, getWarehouses } from "@/lib/api";
 import type {
@@ -15,6 +16,7 @@ const initialForm: CreateWarehousePayload = {
 };
 
 export default function WarehousesPage() {
+  const searchParams = useSearchParams();
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [total, setTotal] = useState(0);
   const [form, setForm] = useState<CreateWarehousePayload>(initialForm);
@@ -47,6 +49,14 @@ export default function WarehousesPage() {
   useEffect(() => {
     void loadWarehouses();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setForm(initialForm);
+      setFormErrorMessage("");
+      setIsFormOpen(true);
+    }
+  }, [searchParams]);
 
   function openForm() {
     setForm(initialForm);
