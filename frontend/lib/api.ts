@@ -35,7 +35,7 @@ import type {
 
 import type { AuditLogsPage } from "@/types/audit-log";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
 export async function login(email: string, password: string): Promise<AuthSession> {
   const response = await fetch(`${apiUrl}/auth/login`, {
