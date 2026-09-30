@@ -11,6 +11,7 @@ from app.api.v1.products import router as products_router
 from app.api.v1.users import router as users_router
 from app.api.v1.warehouses import router as warehouses_router
 from app.core.config import get_settings
+from app.api.v1.tasks import router as tasks_router
 
 settings = get_settings()
 
@@ -37,3 +38,4 @@ app.include_router(products_router, prefix="/api/v1")
 app.include_router(stock_movements_router, prefix="/api/v1")
 app.include_router(inventory_router, prefix="/api/v1")
 app.include_router(requests_router, prefix="/api/v1")
+app.include_router(tasks_router, prefix="/api/v1")

@@ -24,6 +24,13 @@ import type {
   RequestsPage,
 } from "@/types/request";
 
+import type {
+  CreateTaskPayload,
+  TaskData,
+  TasksPage,
+  UpdateTaskStatusPayload,
+} from "@/types/task";
+
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
 export async function login(email: string, password: string): Promise<AuthSession> {
@@ -289,4 +296,62 @@ export async function completeRequest(
   }
 
   return response.json() as Promise<RequestData>;
+}
+
+export async function getTasks(token: string): Promise<TasksPage> {
+  const response = await fetch(`${apiUrl}/tasks?page=1&page_size=50`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося отримати список задач");
+  }
+
+  return response.json() as Promise<TasksPage>;
+}
+
+export async function createTask(
+  token: string,
+  payload: CreateTaskPayload,
+): Promise<TaskData> {
+  const response = await fetch(`${apiUrl}/tasks`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося створити задачу");
+  }
+
+  return response.json() as Promise<TaskData>;
+}
+
+export async function updateTaskStatus(
+  token: string,
+  taskId: number,
+  payload: UpdateTaskStatusPayload,
+): Promise<TaskData> {
+  const response = await fetch(`${apiUrl}/tasks/${taskId}/status`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося оновити статус задачі");
+  }
+
+  return response.json() as Promise<TaskData>;
 }
