@@ -10,10 +10,19 @@ import type {
   Warehouse,
 } from "@/types/auth";
 import type {
+  CreateStockMovementPayload,
   InventoryBalance,
   ProductListItem,
   ProductsPage,
+  StockMovement,
 } from "@/types/inventory";
+
+import type {
+  CreateRequestPayload,
+  RequestData,
+  RequestDecisionPayload,
+  RequestsPage,
+} from "@/types/request";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -182,4 +191,83 @@ export async function getInventoryBalances(
   }
 
   return response.json() as Promise<InventoryBalance[]>;
+}
+
+export async function createStockMovement(
+  token: string,
+  payload: CreateStockMovementPayload,
+): Promise<StockMovement> {
+  const response = await fetch(`${apiUrl}/stock-movements`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося створити рух товару");
+  }
+
+  return response.json() as Promise<StockMovement>;
+}
+
+export async function getRequests(token: string): Promise<RequestsPage> {
+  const response = await fetch(`${apiUrl}/requests?page=1&page_size=50`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося отримати список заявок");
+  }
+
+  return response.json() as Promise<RequestsPage>;
+}
+
+export async function createRequest(
+  token: string,
+  payload: CreateRequestPayload,
+): Promise<RequestData> {
+  const response = await fetch(`${apiUrl}/requests`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося створити заявку");
+  }
+
+  return response.json() as Promise<RequestData>;
+}
+
+export async function decideRequest(
+  token: string,
+  requestId: number,
+  payload: RequestDecisionPayload,
+): Promise<RequestData> {
+  const response = await fetch(`${apiUrl}/requests/${requestId}/decision`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося оновити заявку");
+  }
+
+  return response.json() as Promise<RequestData>;
 }

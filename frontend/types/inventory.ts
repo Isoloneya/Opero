@@ -21,3 +21,22 @@ export type ProductsPage = {
   page: number;
   page_size: number;
 };
+
+export type StockMovementType = "receipt" | "issue";
+
+export type CreateStockMovementPayload = {
+  warehouse_id: number;
+  product_id: number;
+  type: StockMovementType;
+  quantity: number;
+};
+
+export type StockMovement = {
+  id: number;
+  warehouse_id: number;
+  product_id: number;
+  type: StockMovementType;
+  quantity: string;
+  created_by: number;
+  created_at: string;
+};
