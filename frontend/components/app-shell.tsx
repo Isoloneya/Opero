@@ -28,7 +28,7 @@ const primaryNavigation: NavigationItem[] = [
     icon: LayoutDashboard,
   },
   {
-    href: "/warehouses",
+    href: "/inventory",
     label: "Склад",
     icon: Warehouse,
   },
@@ -67,9 +67,13 @@ const pageMetadata = {
     section: "Огляд системи",
     title: "Дашборд",
   },
-  "/warehouses": {
+  "/inventory": {
     section: "Операції",
     title: "Склад",
+  },
+  "/warehouses": {
+    section: "Адміністрування",
+    title: "Склади",
   },
   "/requests": {
     section: "Операції",
@@ -118,7 +122,14 @@ export function AppShell({ children, user }: AppShellProps) {
     .slice(0, 2)
     .toUpperCase();
 
-  const roleLabel = user.role === "admin" ? "Адміністратор" : user.role;
+  const roleLabels = {
+    admin: "Адміністратор",
+    manager: "Менеджер",
+    warehouse_keeper: "Комірник",
+    employee: "Працівник",
+  };
+
+  const roleLabel = roleLabels[user.role] ?? user.role;
 
   return (
     <div className="min-h-screen bg-opero-bg">

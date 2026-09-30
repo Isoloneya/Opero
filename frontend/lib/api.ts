@@ -9,6 +9,11 @@ import type {
   CreateWarehousePayload,
   Warehouse,
 } from "@/types/auth";
+import type {
+  InventoryBalance,
+  ProductListItem,
+  ProductsPage,
+} from "@/types/inventory";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -82,6 +87,7 @@ export async function createUser(
 
   return response.json() as Promise<UserListItem>;
 }
+
 export async function updateUserStatus(
   token: string,
   userId: number,
@@ -120,6 +126,7 @@ export async function getWarehouses(token: string): Promise<WarehousesPage> {
 
   return response.json() as Promise<WarehousesPage>;
 }
+
 export async function createWarehouse(
   token: string,
   payload: CreateWarehousePayload,
@@ -139,4 +146,40 @@ export async function createWarehouse(
   }
 
   return response.json() as Promise<Warehouse>;
+}
+
+export async function getProducts(token: string): Promise<ProductsPage> {
+  const response = await fetch(`${apiUrl}/products?page=1&page_size=100`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося отримати список товарів");
+  }
+
+  return response.json() as Promise<ProductsPage>;
+}
+
+export async function getInventoryBalances(
+  token: string,
+  warehouseId: number,
+): Promise<InventoryBalance[]> {
+  const response = await fetch(
+    `${apiUrl}/inventory-balances?warehouse_id=${warehouseId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося отримати залишки");
+  }
+
+  return response.json() as Promise<InventoryBalance[]>;
 }
