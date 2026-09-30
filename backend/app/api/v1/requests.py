@@ -21,6 +21,11 @@ CurrentApprover = Annotated[
     Depends(require_roles(UserRole.ADMIN, UserRole.MANAGER)),
 ]
 
+CurrentExecutor = Annotated[
+    User,
+    Depends(require_roles(UserRole.ADMIN, UserRole.WAREHOUSE_KEEPER)),
+]
+
 
 @router.post("", response_model=RequestResponse, status_code=status.HTTP_201_CREATED)
 def create_request(
@@ -69,6 +74,25 @@ def decide_request(
             request_id,
             payload,
             current_approver.id,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
+@router.post("/{request_id}/complete", response_model=RequestResponse)
+def complete_issue_request(
+    request_id: int,
+    database_session: DatabaseSession,
+    current_executor: CurrentExecutor,
+) -> RequestResponse:
+    try:
+        return RequestService().complete_issue_request(
+            database_session,
+            request_id,
+            current_executor.id,
         )
     except ValueError as error:
         raise HTTPException(

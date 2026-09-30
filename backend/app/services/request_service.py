@@ -1,10 +1,13 @@
 from datetime import datetime
+from decimal import Decimal
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
-from app.models.request import Request, RequestItem, RequestStatus
+from app.models.inventory import StockMovement, StockMovementType
+from app.models.request import Request, RequestItem, RequestStatus, RequestType
 from app.models.user import User, UserRole
+from app.repositories.inventory_repository import InventoryRepository
 from app.repositories.product_repository import ProductRepository
 from app.repositories.request_repository import RequestRepository
 from app.repositories.warehouse_repository import WarehouseRepository
@@ -23,10 +26,12 @@ class RequestService:
         request_repository: RequestRepository | None = None,
         product_repository: ProductRepository | None = None,
         warehouse_repository: WarehouseRepository | None = None,
+        inventory_repository: InventoryRepository | None = None,
     ) -> None:
         self.request_repository = request_repository or RequestRepository()
         self.product_repository = product_repository or ProductRepository()
         self.warehouse_repository = warehouse_repository or WarehouseRepository()
+        self.inventory_repository = inventory_repository or InventoryRepository()
 
     def create_request(
         self,
@@ -49,7 +54,9 @@ class RequestService:
             )
 
             if not product or not product.is_active:
-                raise ValueError(f"Товар з id {item.product_id} не знайдено або він деактивований")
+                raise ValueError(
+                    f"Товар з id {item.product_id} не знайдено або він деактивований",
+                )
 
         request = Request(
             request_number=self._create_request_number(),
@@ -144,6 +151,70 @@ class RequestService:
             database_session,
             request.id,
         )
+
+        return self._to_response(request, request_items)
+
+    def complete_issue_request(
+        self,
+        database_session: Session,
+        request_id: int,
+        user_id: int,
+    ) -> RequestResponse:
+        request = self.request_repository.get_by_id(database_session, request_id)
+
+        if not request:
+            raise ValueError("Заявку не знайдено")
+
+        if request.type != RequestType.ISSUE:
+            raise ValueError("Виконати через склад можна лише заявку на видачу")
+
+        if request.status != RequestStatus.APPROVED:
+            raise ValueError("Виконати можна лише погоджену заявку")
+
+        request_items = self.request_repository.get_items(
+            database_session,
+            request.id,
+        )
+
+        required_quantities: dict[int, Decimal] = {}
+
+        for item in request_items:
+            required_quantities[item.product_id] = (
+                required_quantities.get(item.product_id, Decimal("0")) + item.quantity
+            )
+
+        balances = {}
+
+        for product_id, required_quantity in required_quantities.items():
+            balance = self.inventory_repository.get_balance(
+                database_session,
+                request.warehouse_id,
+                product_id,
+            )
+
+            if not balance or balance.quantity < required_quantity:
+                raise ValueError("Недостатньо товару на складі для виконання заявки")
+
+            balances[product_id] = balance
+
+        for item in request_items:
+            balance = balances[item.product_id]
+            balance.quantity -= item.quantity
+
+            self.inventory_repository.create_movement(
+                database_session,
+                StockMovement(
+                    warehouse_id=request.warehouse_id,
+                    product_id=item.product_id,
+                    type=StockMovementType.ISSUE,
+                    quantity=item.quantity,
+                    created_by=user_id,
+                ),
+            )
+
+        request.status = RequestStatus.COMPLETED
+
+        database_session.commit()
 
         return self._to_response(request, request_items)
 

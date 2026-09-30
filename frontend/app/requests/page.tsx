@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   Trash2,
   X,
+  PackageCheck,
 } from "lucide-react";
 
 import {
@@ -18,6 +19,7 @@ import {
   getProducts,
   getRequests,
   getWarehouses,
+  completeRequest,
 } from "@/lib/api";
 import type { CurrentUser, Warehouse } from "@/types/auth";
 import type { ProductListItem } from "@/types/inventory";
@@ -84,6 +86,9 @@ export default function RequestsPage() {
 
   const canDecide =
     currentUser?.role === "admin" || currentUser?.role === "manager";
+
+  const canComplete =
+    currentUser?.role === "admin" || currentUser?.role === "warehouse_keeper";
 
   function closeCreateForm() {
     setIsCreateFormOpen(false);
@@ -272,6 +277,33 @@ export default function RequestsPage() {
     }
   }
 
+    async function handleCompleteRequest(requestId: number) {
+    const token = localStorage.getItem("opero_access_token");
+
+    if (!token) {
+        return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage("");
+
+    try {
+        const updatedRequest = await completeRequest(token, requestId);
+
+        setRequests((items) =>
+        items.map((request) =>
+            request.id === updatedRequest.id ? updatedRequest : request,
+        ),
+        );
+    } catch (error) {
+        setErrorMessage(
+        error instanceof Error ? error.message : "Не вдалося виконати заявку",
+        );
+    } finally {
+        setIsSubmitting(false);
+    }
+    }
+
   return (
     <div className="space-y-5">
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -410,6 +442,21 @@ export default function RequestsPage() {
                       </button>
                     </div>
                   ) : null}
+                  {canComplete &&
+                    request.status === "approved" &&
+                    request.type === "issue" ? (
+                    <div className="mt-2 flex justify-end xl:mt-0">
+                        <button
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={() => handleCompleteRequest(request.id)}
+                        className="inline-flex items-center gap-2 rounded-xl bg-opero-blue px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-60"
+                        >
+                        <PackageCheck size={17} />
+                        Виконати
+                        </button>
+                    </div>
+                    ) : null}
                 </div>
               </article>
             );

@@ -271,3 +271,22 @@ export async function decideRequest(
 
   return response.json() as Promise<RequestData>;
 }
+
+export async function completeRequest(
+  token: string,
+  requestId: number,
+): Promise<RequestData> {
+  const response = await fetch(`${apiUrl}/requests/${requestId}/complete`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as ApiError;
+    throw new Error(error.detail ?? "Не вдалося виконати заявку");
+  }
+
+  return response.json() as Promise<RequestData>;
+}
